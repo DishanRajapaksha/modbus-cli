@@ -20,6 +20,7 @@
 | Execute a register write | `modbus-cli write register --address 10 --type uint16 --value 42 --yes` |
 | Poll values | `modbus-cli watch holding-registers --address 0 --quantity 2 --interval 1s --format jsonl` |
 | Read device identification | `modbus-cli identify --level basic` |
+| Scan SunSpec models | `modbus-cli sunspec scan` |
 
 ## Install
 
@@ -276,7 +277,15 @@ modbus-cli read holding-registers --address 0 --quantity 1 --debug
 
 ## SunSpec
 
-SunSpec support should stay separate from generic named points. The `github.com/andig/gosunspec` domain model can be useful for future SunSpec discovery, but its `gosunspec/modbus` adapter currently targets an older `github.com/grid-x/modbus` API than this CLI uses. For now, use named points for operator-friendly mappings and keep raw commands available for diagnostics.
+SunSpec support is separate from generic named points. The CLI uses the `github.com/andig/gosunspec` domain model and layout scanner, but it does not import `gosunspec/modbus`; instead it bridges SunSpec reads through this CLI's context-aware Modbus wrapper.
+
+```bash
+modbus-cli sunspec scan
+modbus-cli sunspec models --format json
+modbus-cli sunspec read --model 1 --point Mn
+```
+
+`sunspec scan` and `sunspec models` discover the SunSpec marker and list detected models, blocks, addresses, lengths, and point counts. `sunspec read` reads one point from a detected model.
 
 ## Shell Completions
 

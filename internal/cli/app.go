@@ -81,6 +81,8 @@ func (a *App) Run(args []string) int {
 		err = a.writePoint(args[1:])
 	case "watch-point":
 		err = a.watchPoint(args[1:])
+	case "sunspec":
+		err = a.sunspec(args[1:])
 	case "identify":
 		err = a.identify(args[1:])
 	case "watch":
@@ -140,6 +142,7 @@ Usage:
   modbus-cli read-point active_power
   modbus-cli write register --address 10 --type uint16 --value 42 --yes
   modbus-cli write-point breaker_closed --value on --yes
+  modbus-cli sunspec scan
   modbus-cli watch coils --address 0 --quantity 8 --interval 1s --format jsonl
   modbus-cli completions zsh
   modbus-cli version
@@ -155,6 +158,7 @@ Commands:
   read-point       Read a configured named point
   write-point      Write a configured named point
   watch-point      Poll a configured named point
+  sunspec          Scan/read SunSpec models
   identify         Read device identification objects
   watch            Poll values repeatedly
   completions      Generate shell completion scripts
@@ -272,7 +276,7 @@ func rewriteGlobalsForCommand(command string, globals []string) []string {
 
 func commandSupportsGlobals(command string) bool {
 	switch command {
-	case "validate-config", "test-connection", "status", "read", "write", "points", "read-point", "write-point", "watch-point", "identify", "watch":
+	case "validate-config", "test-connection", "status", "read", "write", "points", "read-point", "write-point", "watch-point", "sunspec", "identify", "watch":
 		return true
 	default:
 		return false

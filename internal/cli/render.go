@@ -7,6 +7,7 @@ import (
 	"github.com/DishanRajapaksha/modbus-cli/internal/config"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
 	"github.com/DishanRajapaksha/modbus-cli/internal/output"
+	"github.com/DishanRajapaksha/modbus-cli/internal/sunspec"
 )
 
 func (a *App) renderDiagnostic(format string, result modbusclient.DiagnosticResult) error {
@@ -127,6 +128,76 @@ func (a *App) renderPoints(format string, points []config.PointConfig) error {
 	default:
 		return output.WriteTable(a.out, []string{"Name", "Kind", "Address", "Quantity", "Type", "Unit", "Writable"}, pointRows(points))
 	}
+}
+
+func (a *App) renderSunSpecScan(format string, result sunspec.ScanResult) error {
+	switch output.NormaliseFormat(format) {
+	case output.FormatJSON:
+		return output.WriteJSON(a.out, result)
+	case output.FormatJSONL:
+		for _, row := range sunspecRows(result) {
+			if err := output.WriteJSONLine(a.out, map[string]string{
+				"device":  row[0],
+				"model":   row[1],
+				"block":   row[2],
+				"address": row[3],
+				"length":  row[4],
+				"points":  row[5],
+			}); err != nil {
+				return err
+			}
+		}
+		return nil
+	case output.FormatCSV:
+		return output.WriteCSV(a.out, []string{"Device", "Model", "Block", "Address", "Length", "Points"}, sunspecRows(result))
+	case output.FormatText:
+		for _, row := range sunspecRows(result) {
+			if _, err := fmt.Fprintf(a.out, "device=%s model=%s block=%s address=%s length=%s points=%s\n", row[0], row[1], row[2], row[3], row[4], row[5]); err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		return output.WriteTable(a.out, []string{"Device", "Model", "Block", "Address", "Length", "Points"}, sunspecRows(result))
+	}
+}
+
+func (a *App) renderSunSpecRead(format string, result sunspec.ReadResult) error {
+	switch output.NormaliseFormat(format) {
+	case output.FormatJSON:
+		return output.WriteJSON(a.out, result)
+	case output.FormatJSONL:
+		return output.WriteJSONLine(a.out, result)
+	case output.FormatCSV:
+		return output.WriteCSV(a.out, []string{"Model", "Point", "Type", "Value"}, [][]string{sunspecReadRow(result)})
+	case output.FormatText:
+		return output.WriteText(a.out, fmt.Sprintf("model=%d point=%s type=%s value=%v", result.Model, result.Point, result.Type, result.Value))
+	default:
+		return output.WriteTable(a.out, []string{"Model", "Point", "Type", "Value"}, [][]string{sunspecReadRow(result)})
+	}
+}
+
+func sunspecRows(result sunspec.ScanResult) [][]string {
+	rows := [][]string{}
+	for _, device := range result.Devices {
+		for _, model := range device.Models {
+			for _, block := range model.Blocks {
+				rows = append(rows, []string{
+					fmt.Sprint(device.Index),
+					fmt.Sprint(model.ID),
+					fmt.Sprint(block.Index),
+					fmt.Sprint(block.Address),
+					fmt.Sprint(block.Length),
+					fmt.Sprint(len(block.Points)),
+				})
+			}
+		}
+	}
+	return rows
+}
+
+func sunspecReadRow(result sunspec.ReadResult) []string {
+	return []string{fmt.Sprint(result.Model), result.Point, result.Type, fmt.Sprint(result.Value)}
 }
 
 func pointRows(points []config.PointConfig) [][]string {

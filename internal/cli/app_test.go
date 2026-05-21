@@ -127,6 +127,28 @@ func TestWatchPointRejectsJSONFormat(t *testing.T) {
 	}
 }
 
+func TestSunSpecHelpExitsSuccess(t *testing.T) {
+	var out, err bytes.Buffer
+	code := NewAppWithFactory(&out, &err, fakeFactory{}).Run([]string{"sunspec", "--help"})
+	if code != exitSuccess {
+		t.Fatalf("code=%d err=%s", code, err.String())
+	}
+	if !strings.Contains(err.String(), "Usage of sunspec:") {
+		t.Fatalf("unexpected stderr: %s", err.String())
+	}
+}
+
+func TestSunSpecScanUsesFactory(t *testing.T) {
+	var out, err bytes.Buffer
+	code := NewAppWithFactory(&out, &err, fakeSunSpecFactory{}).Run([]string{"sunspec", "scan"})
+	if code != exitSuccess {
+		t.Fatalf("code=%d err=%s", code, err.String())
+	}
+	if !strings.Contains(out.String(), "Model") || !strings.Contains(out.String(), "1") {
+		t.Fatalf("unexpected output: %s", out.String())
+	}
+}
+
 func writePointConfig(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -200,4 +222,60 @@ func (fakeClient) WriteMultipleRegisters(context.Context, uint16, []uint16) ([]b
 
 func (fakeClient) ReadDeviceIdentification(context.Context, modbusclient.IdentificationLevel) (map[byte][]byte, error) {
 	return map[byte][]byte{0: []byte("vendor")}, nil
+}
+
+type fakeSunSpecFactory struct{}
+
+func (fakeSunSpecFactory) New(config.Config, modbusclient.Options) (modbusclient.Client, error) {
+	return fakeSunSpecClient{registers: commonModelRegisters()}, nil
+}
+
+type fakeSunSpecClient struct {
+	registers map[uint16]uint16
+}
+
+func (fakeSunSpecClient) Connect(context.Context) error { return nil }
+func (fakeSunSpecClient) Close() error                  { return nil }
+func (fakeSunSpecClient) ReadCoils(context.Context, uint16, uint16) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (fakeSunSpecClient) ReadDiscreteInputs(context.Context, uint16, uint16) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (f fakeSunSpecClient) ReadHoldingRegisters(_ context.Context, address uint16, quantity uint16) ([]byte, error) {
+	out := make([]byte, quantity*2)
+	for i := uint16(0); i < quantity; i++ {
+		value := f.registers[address+i]
+		out[i*2] = byte(value >> 8)
+		out[i*2+1] = byte(value)
+	}
+	return out, nil
+}
+func (fakeSunSpecClient) ReadInputRegisters(context.Context, uint16, uint16) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (fakeSunSpecClient) WriteSingleCoil(context.Context, uint16, bool) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (fakeSunSpecClient) WriteMultipleCoils(context.Context, uint16, []bool) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (fakeSunSpecClient) WriteSingleRegister(context.Context, uint16, uint16) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (fakeSunSpecClient) WriteMultipleRegisters(context.Context, uint16, []uint16) ([]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+func (fakeSunSpecClient) ReadDeviceIdentification(context.Context, modbusclient.IdentificationLevel) (map[byte][]byte, error) {
+	return nil, modbusclient.ErrRequest
+}
+
+func commonModelRegisters() map[uint16]uint16 {
+	return map[uint16]uint16{
+		40000: 0x5375,
+		40001: 0x6e53,
+		40002: 1,
+		40003: 66,
+		40070: 0xffff,
+	}
 }

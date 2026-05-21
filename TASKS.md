@@ -33,3 +33,9 @@
 - [x] Add `points`, `read-point`, `write-point`, and `watch-point`.
 - [x] Apply scale/offset on reads and reverse them before writes.
 - [x] Keep SunSpec support isolated behind a future package boundary without importing the incompatible `gosunspec/modbus` adapter.
+
+## Phase 7 - SunSpec Scan
+
+- [x] Add a context-aware SunSpec address-space driver over `internal/modbusclient`.
+- [x] Add `sunspec scan`, `sunspec models`, and `sunspec read --model --point`.
+- [x] Use `github.com/andig/gosunspec` layout/model packages without importing `gosunspec/modbus`.

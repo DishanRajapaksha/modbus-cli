@@ -16,6 +16,7 @@ import (
 	"github.com/DishanRajapaksha/modbus-cli/internal/devicemap"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
 	"github.com/DishanRajapaksha/modbus-cli/internal/output"
+	"github.com/DishanRajapaksha/modbus-cli/internal/sunspec"
 )
 
 func (a *App) initConfig(args []string) error {
@@ -612,6 +613,85 @@ func (a *App) watchPoint(args []string) error {
 	}
 }
 
+func (a *App) sunspec(args []string) error {
+	if len(args) == 0 {
+		printSunSpecHelp(a.err)
+		return fmt.Errorf("%w: sunspec command is required", modbusclient.ErrValidation)
+	}
+	switch args[0] {
+	case "--help", "-h":
+		printSunSpecHelp(a.err)
+		return flag.ErrHelp
+	case "scan", "models":
+		return a.sunspecScan(args[1:])
+	case "read":
+		return a.sunspecRead(args[1:])
+	default:
+		return fmt.Errorf("%w: unknown sunspec command %q", modbusclient.ErrValidation, args[0])
+	}
+}
+
+func (a *App) sunspecScan(args []string) error {
+	fs := a.newFlagSet("sunspec scan")
+	common := commonOptions{}
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg, format, err := common.loadConfig(fs, output.FormatTable)
+	if err != nil {
+		return err
+	}
+	if err := validateSnapshotFormat(format); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)
+	defer cancel()
+	client, err := a.openClient(ctx, cfg, common)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	result, err := sunspec.NewScanner(client).Scan(ctx)
+	if err != nil {
+		return err
+	}
+	return a.renderSunSpecScan(format, result)
+}
+
+func (a *App) sunspecRead(args []string) error {
+	fs := a.newFlagSet("sunspec read")
+	common := commonOptions{}
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	modelID := fs.Uint("model", 0, "SunSpec model id")
+	pointID := fs.String("point", "", "SunSpec point id")
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	if *modelID == 0 || *modelID > 65535 || strings.TrimSpace(*pointID) == "" {
+		return fmt.Errorf("%w: --model and --point are required", modbusclient.ErrValidation)
+	}
+	cfg, format, err := common.loadConfig(fs, output.FormatTable)
+	if err != nil {
+		return err
+	}
+	if err := validateSnapshotFormat(format); err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)
+	defer cancel()
+	client, err := a.openClient(ctx, cfg, common)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	result, err := sunspec.NewScanner(client).ReadPoint(ctx, uint16(*modelID), *pointID)
+	if err != nil {
+		return err
+	}
+	return a.renderSunSpecRead(format, result)
+}
+
 func (a *App) openClient(ctx context.Context, cfg config.Config, common commonOptions) (modbusclient.Client, error) {
 	if common.verbose {
 		fmt.Fprintf(a.err, "verbose: connect transport=%s address=%s unit_id=%d timeout=%s\n", cfg.Connection.Transport, cfg.Connection.Address, cfg.Connection.UnitID, cfg.Connection.Timeout)
@@ -677,6 +757,18 @@ Examples:
   modbus-cli read-point active_power
   modbus-cli write-point breaker_closed --value on --yes
   modbus-cli watch-point active_power --interval 1s --format jsonl`)
+}
+
+func printSunSpecHelp(w io.Writer) {
+	fmt.Fprintln(w, `Usage of sunspec:
+  modbus-cli sunspec scan [flags]
+  modbus-cli sunspec models [flags]
+  modbus-cli sunspec read --model <id> --point <id> [flags]
+
+Examples:
+  modbus-cli sunspec scan
+  modbus-cli sunspec models --format json
+  modbus-cli sunspec read --model 1 --point Mn`)
 }
 
 func splitCSV(value string) []string {

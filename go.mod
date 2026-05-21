@@ -3,6 +3,7 @@ module github.com/DishanRajapaksha/modbus-cli
 go 1.23
 
 require (
+	github.com/andig/gosunspec v0.0.0-20240918203654-860ce51d602b
 	github.com/grid-x/modbus v0.0.0-20260325140807-cf9e1b9daae0
 	gopkg.in/yaml.v3 v3.0.1
 )

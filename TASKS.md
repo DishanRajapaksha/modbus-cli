@@ -25,3 +25,11 @@
 - [x] Run `go test ./...`.
 - [x] Run `make build`.
 - [x] Smoke-test help, config generation, config validation, and completions.
+
+## Phase 6 - Device Maps
+
+- [x] Add generic YAML named point definitions.
+- [x] Add point validation, profile merging, and duplicate-name checks.
+- [x] Add `points`, `read-point`, `write-point`, and `watch-point`.
+- [x] Apply scale/offset on reads and reverse them before writes.
+- [x] Keep SunSpec support isolated behind a future package boundary without importing the incompatible `gosunspec/modbus` adapter.

@@ -13,6 +13,9 @@
 | Read discrete inputs | `modbus-cli read discrete-inputs --address 0 --quantity 8` |
 | Read holding registers | `modbus-cli read holding-registers --address 0 --quantity 2 --type float32` |
 | Read input registers | `modbus-cli read input-registers --address 0 --quantity 2 --type uint16` |
+| List named points | `modbus-cli points` |
+| Read a named point | `modbus-cli read-point active_power` |
+| Dry-run a named point write | `modbus-cli write-point breaker_closed --value on` |
 | Dry-run a coil write | `modbus-cli write coil --address 0 --value on` |
 | Execute a register write | `modbus-cli write register --address 10 --type uint16 --value 42 --yes` |
 | Poll values | `modbus-cli watch holding-registers --address 0 --quantity 2 --interval 1s --format jsonl` |
@@ -95,6 +98,23 @@ rtu:
 output:
   format: table
 
+points:
+  - name: active_power
+    kind: holding-register
+    address: 0
+    quantity: 2
+    type: float32
+    byte_order: big
+    word_order: high-low
+    unit: kW
+    scale: 1
+    offset: 0
+  - name: breaker_closed
+    kind: coil
+    address: 0
+    quantity: 1
+    writable: true
+
 default_profile: local
 profiles:
   local:
@@ -130,6 +150,30 @@ modbus-cli read holding-registers --address 0 --quantity 2 --type float32
 modbus-cli read input-registers --address 0 --quantity 4 --type uint16 --format json
 modbus-cli read coils --connect-address 192.0.2.10:502 --unit-id 7 --address 0 --quantity 8
 ```
+
+### Named Points
+
+Named points let operators use configured names instead of raw addresses:
+
+```bash
+modbus-cli points
+modbus-cli read-point active_power
+modbus-cli write-point breaker_closed --value on
+modbus-cli write-point breaker_closed --value on --yes
+modbus-cli watch-point active_power --interval 1s --duration 30s --format jsonl
+```
+
+Point fields:
+
+- `name`: unique point name.
+- `kind`: `coil`, `discrete-input`, `holding-register`, or `input-register`.
+- `address`: starting Modbus address.
+- `quantity`: coil/register count.
+- `type`: register decode type, such as `uint16` or `float32`.
+- `byte_order` and `word_order`: register byte/word order.
+- `unit`: display unit.
+- `scale` and `offset`: applied after reads and reversed before writes.
+- `writable`: required for `write-point`.
 
 Register decode types:
 
@@ -229,6 +273,10 @@ Use `--debug` to enable lower-level Modbus frame logging where supported by the 
 ```bash
 modbus-cli read holding-registers --address 0 --quantity 1 --debug
 ```
+
+## SunSpec
+
+SunSpec support should stay separate from generic named points. The `github.com/andig/gosunspec` domain model can be useful for future SunSpec discovery, but its `gosunspec/modbus` adapter currently targets an older `github.com/grid-x/modbus` API than this CLI uses. For now, use named points for operator-friendly mappings and keep raw commands available for diagnostics.
 
 ## Shell Completions
 

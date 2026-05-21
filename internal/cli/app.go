@@ -73,6 +73,14 @@ func (a *App) Run(args []string) int {
 		err = a.read(args[1:])
 	case "write":
 		err = a.write(args[1:])
+	case "points":
+		err = a.points(args[1:])
+	case "read-point":
+		err = a.readPoint(args[1:])
+	case "write-point":
+		err = a.writePoint(args[1:])
+	case "watch-point":
+		err = a.watchPoint(args[1:])
 	case "identify":
 		err = a.identify(args[1:])
 	case "watch":
@@ -129,7 +137,9 @@ Usage:
   modbus-cli validate-config --profile local
   modbus-cli test-connection --transport tcp --address 127.0.0.1:502
   modbus-cli read holding-registers --address 0 --quantity 2 --type float32
+  modbus-cli read-point active_power
   modbus-cli write register --address 10 --type uint16 --value 42 --yes
+  modbus-cli write-point breaker_closed --value on --yes
   modbus-cli watch coils --address 0 --quantity 8 --interval 1s --format jsonl
   modbus-cli completions zsh
   modbus-cli version
@@ -141,6 +151,10 @@ Commands:
   status           Alias for test-connection
   read             Read coils, discrete inputs, holding registers, or input registers
   write            Write coils or holding registers
+  points           List configured named points
+  read-point       Read a configured named point
+  write-point      Write a configured named point
+  watch-point      Poll a configured named point
   identify         Read device identification objects
   watch            Poll values repeatedly
   completions      Generate shell completion scripts
@@ -235,7 +249,7 @@ func appendCommandGlobals(args []string, globals []string) []string {
 
 func commandTakesTypeBeforeFlags(command string) bool {
 	switch command {
-	case "read", "write", "watch":
+	case "read", "write", "watch", "read-point", "write-point", "watch-point":
 		return true
 	default:
 		return false
@@ -243,7 +257,7 @@ func commandTakesTypeBeforeFlags(command string) bool {
 }
 
 func rewriteGlobalsForCommand(command string, globals []string) []string {
-	if command != "read" && command != "write" && command != "watch" {
+	if command != "read" && command != "write" && command != "watch" && command != "read-point" && command != "write-point" && command != "watch-point" {
 		return globals
 	}
 	out := append([]string(nil), globals...)
@@ -258,7 +272,7 @@ func rewriteGlobalsForCommand(command string, globals []string) []string {
 
 func commandSupportsGlobals(command string) bool {
 	switch command {
-	case "validate-config", "test-connection", "status", "read", "write", "identify", "watch":
+	case "validate-config", "test-connection", "status", "read", "write", "points", "read-point", "write-point", "watch-point", "identify", "watch":
 		return true
 	default:
 		return false

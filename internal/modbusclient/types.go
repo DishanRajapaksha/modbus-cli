@@ -67,9 +67,11 @@ func ParseIdentificationLevel(value string) (IdentificationLevel, error) {
 
 type ReadResult struct {
 	Kind      string    `json:"kind"`
+	Point     string    `json:"point,omitempty"`
 	Address   uint16    `json:"address"`
 	Quantity  uint16    `json:"quantity"`
 	Type      string    `json:"type,omitempty"`
+	Unit      string    `json:"unit,omitempty"`
 	Raw       string    `json:"raw,omitempty"`
 	Values    []Value   `json:"values"`
 	Timestamp time.Time `json:"timestamp"`
@@ -77,15 +79,19 @@ type ReadResult struct {
 
 type Value struct {
 	Address uint16 `json:"address"`
+	Point   string `json:"point,omitempty"`
 	Value   any    `json:"value"`
+	Unit    string `json:"unit,omitempty"`
 	Raw     string `json:"raw,omitempty"`
 }
 
 type WriteResult struct {
 	Kind      string    `json:"kind"`
+	Point     string    `json:"point,omitempty"`
 	Address   uint16    `json:"address"`
 	Quantity  uint16    `json:"quantity"`
 	Type      string    `json:"type,omitempty"`
+	Unit      string    `json:"unit,omitempty"`
 	Values    []any     `json:"values"`
 	DryRun    bool      `json:"dry_run"`
 	Sent      bool      `json:"sent"`

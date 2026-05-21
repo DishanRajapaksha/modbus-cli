@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/DishanRajapaksha/modbus-cli/internal/config"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
 	"github.com/DishanRajapaksha/modbus-cli/internal/output"
 )
@@ -38,7 +39,7 @@ func (a *App) renderRead(format string, result modbusclient.ReadResult) error {
 		}
 		return nil
 	case output.FormatCSV:
-		return output.WriteCSV(a.out, []string{"Kind", "Address", "Value", "Raw"}, readRows(result))
+		return output.WriteCSV(a.out, []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}, readRows(result))
 	case output.FormatText:
 		for _, value := range result.Values {
 			if _, err := fmt.Fprintf(a.out, "%d %v\n", value.Address, value.Value); err != nil {
@@ -47,14 +48,14 @@ func (a *App) renderRead(format string, result modbusclient.ReadResult) error {
 		}
 		return nil
 	default:
-		return output.WriteTable(a.out, []string{"Kind", "Address", "Value", "Raw"}, readRows(result))
+		return output.WriteTable(a.out, []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}, readRows(result))
 	}
 }
 
 func readRows(result modbusclient.ReadResult) [][]string {
 	rows := make([][]string, 0, len(result.Values))
 	for _, value := range result.Values {
-		rows = append(rows, []string{result.Kind, fmt.Sprint(value.Address), fmt.Sprint(value.Value), value.Raw})
+		rows = append(rows, []string{firstNonEmpty(value.Point, result.Point), result.Kind, fmt.Sprint(value.Address), fmt.Sprint(value.Value), firstNonEmpty(value.Unit, result.Unit), value.Raw})
 	}
 	return rows
 }
@@ -66,16 +67,16 @@ func (a *App) renderWrite(format string, result modbusclient.WriteResult) error 
 	case output.FormatJSONL:
 		return output.WriteJSONLine(a.out, result)
 	case output.FormatCSV:
-		return output.WriteCSV(a.out, []string{"Kind", "Address", "Quantity", "Values", "DryRun", "Sent"}, [][]string{writeRow(result)})
+		return output.WriteCSV(a.out, []string{"Point", "Kind", "Address", "Quantity", "Values", "Unit", "DryRun", "Sent"}, [][]string{writeRow(result)})
 	case output.FormatText:
 		return output.WriteText(a.out, fmt.Sprintf("%s address=%d quantity=%d values=%v dry_run=%t sent=%t", result.Kind, result.Address, result.Quantity, result.Values, result.DryRun, result.Sent))
 	default:
-		return output.WriteTable(a.out, []string{"Kind", "Address", "Quantity", "Values", "Dry run", "Sent"}, [][]string{writeRow(result)})
+		return output.WriteTable(a.out, []string{"Point", "Kind", "Address", "Quantity", "Values", "Unit", "Dry run", "Sent"}, [][]string{writeRow(result)})
 	}
 }
 
 func writeRow(result modbusclient.WriteResult) []string {
-	return []string{result.Kind, fmt.Sprint(result.Address), fmt.Sprint(result.Quantity), fmt.Sprint(result.Values), fmt.Sprint(result.DryRun), fmt.Sprint(result.Sent)}
+	return []string{result.Point, result.Kind, fmt.Sprint(result.Address), fmt.Sprint(result.Quantity), fmt.Sprint(result.Values), result.Unit, fmt.Sprint(result.DryRun), fmt.Sprint(result.Sent)}
 }
 
 func (a *App) renderIdentification(format string, result modbusclient.IdentificationResult) error {
@@ -103,6 +104,39 @@ func (a *App) renderIdentification(format string, result modbusclient.Identifica
 	}
 }
 
+func (a *App) renderPoints(format string, points []config.PointConfig) error {
+	switch output.NormaliseFormat(format) {
+	case output.FormatJSON:
+		return output.WriteJSON(a.out, points)
+	case output.FormatJSONL:
+		for _, point := range points {
+			if err := output.WriteJSONLine(a.out, point); err != nil {
+				return err
+			}
+		}
+		return nil
+	case output.FormatCSV:
+		return output.WriteCSV(a.out, []string{"Name", "Kind", "Address", "Quantity", "Type", "Unit", "Writable"}, pointRows(points))
+	case output.FormatText:
+		for _, point := range points {
+			if _, err := fmt.Fprintf(a.out, "%s %s address=%d quantity=%d type=%s unit=%s writable=%t\n", point.Name, point.Kind, point.Address, point.Quantity, point.Type, point.Unit, point.Writable); err != nil {
+				return err
+			}
+		}
+		return nil
+	default:
+		return output.WriteTable(a.out, []string{"Name", "Kind", "Address", "Quantity", "Type", "Unit", "Writable"}, pointRows(points))
+	}
+}
+
+func pointRows(points []config.PointConfig) [][]string {
+	rows := make([][]string, 0, len(points))
+	for _, point := range points {
+		rows = append(rows, []string{point.Name, point.Kind, fmt.Sprint(point.Address), fmt.Sprint(point.Quantity), point.Type, point.Unit, fmt.Sprint(point.Writable)})
+	}
+	return rows
+}
+
 func identificationRows(result modbusclient.IdentificationResult) [][]string {
 	keys := make([]string, 0, len(result.Objects))
 	for key := range result.Objects {
@@ -121,7 +155,7 @@ func (a *App) renderWatch(format string, result modbusclient.ReadResult) error {
 	case output.FormatJSONL:
 		return output.WriteJSONLine(a.out, result)
 	case output.FormatCSV:
-		return output.WriteCSV(a.out, []string{"Kind", "Address", "Value", "Raw"}, readRows(result))
+		return output.WriteCSV(a.out, []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}, readRows(result))
 	default:
 		for _, value := range result.Values {
 			if _, err := fmt.Fprintf(a.out, "%s %d %v\n", result.Timestamp.Format("2006-01-02T15:04:05Z07:00"), value.Address, value.Value); err != nil {
@@ -130,4 +164,13 @@ func (a *App) renderWatch(format string, result modbusclient.ReadResult) error {
 		}
 		return nil
 	}
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if value != "" {
+			return value
+		}
+	}
+	return ""
 }

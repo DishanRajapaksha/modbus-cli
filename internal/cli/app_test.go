@@ -3,6 +3,8 @@ package cli
 import (
 	"bytes"
 	"context"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -75,6 +77,77 @@ func TestPreCommandAddressBecomesConnectAddressForRead(t *testing.T) {
 	if !strings.Contains(out.String(), "4660") {
 		t.Fatalf("unexpected output: %s", out.String())
 	}
+}
+
+func TestPointsListsConfiguredPoints(t *testing.T) {
+	path := writePointConfig(t)
+	var out, err bytes.Buffer
+	code := NewAppWithFactory(&out, &err, fakeFactory{}).Run([]string{"points", "--config", path})
+	if code != exitSuccess {
+		t.Fatalf("code=%d err=%s", code, err.String())
+	}
+	if !strings.Contains(out.String(), "active_power") || !strings.Contains(out.String(), "kW") {
+		t.Fatalf("unexpected output: %s", out.String())
+	}
+}
+
+func TestReadPointUsesRawReadPath(t *testing.T) {
+	path := writePointConfig(t)
+	var out, err bytes.Buffer
+	code := NewAppWithFactory(&out, &err, fakeFactory{}).Run([]string{"read-point", "active_power", "--config", path})
+	if code != exitSuccess {
+		t.Fatalf("code=%d err=%s", code, err.String())
+	}
+	if !strings.Contains(out.String(), "active_power") || !strings.Contains(out.String(), "466") {
+		t.Fatalf("unexpected output: %s", out.String())
+	}
+}
+
+func TestWritePointDryRunDoesNotCreateClient(t *testing.T) {
+	path := writePointConfig(t)
+	var out, err bytes.Buffer
+	code := NewAppWithFactory(&out, &err, fakeFactory{failOnNew: true}).Run([]string{"write-point", "breaker_closed", "--config", path, "--value", "on"})
+	if code != exitSuccess {
+		t.Fatalf("code=%d err=%s", code, err.String())
+	}
+	if !strings.Contains(out.String(), "breaker_closed") || !strings.Contains(out.String(), "true") {
+		t.Fatalf("unexpected output: %s", out.String())
+	}
+}
+
+func TestWatchPointRejectsJSONFormat(t *testing.T) {
+	path := writePointConfig(t)
+	var out, err bytes.Buffer
+	code := NewAppWithFactory(&out, &err, fakeFactory{}).Run([]string{"watch-point", "active_power", "--config", path, "--format", "json"})
+	if code != exitConfigError {
+		t.Fatalf("code=%d", code)
+	}
+	if !strings.Contains(err.String(), "use --format jsonl") {
+		t.Fatalf("unexpected stderr: %s", err.String())
+	}
+}
+
+func writePointConfig(t *testing.T) string {
+	t.Helper()
+	dir := t.TempDir()
+	path := filepath.Join(dir, "config.yaml")
+	if err := os.WriteFile(path, []byte(`points:
+  - name: active_power
+    kind: holding-register
+    address: 0
+    quantity: 1
+    type: uint16
+    unit: kW
+    scale: 0.1
+  - name: breaker_closed
+    kind: coil
+    address: 0
+    quantity: 1
+    writable: true
+`), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	return path
 }
 
 type fakeFactory struct {

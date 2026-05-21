@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/DishanRajapaksha/modbus-cli/internal/config"
+	"github.com/DishanRajapaksha/modbus-cli/internal/devicemap"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
 	"github.com/DishanRajapaksha/modbus-cli/internal/output"
 )
@@ -344,6 +345,145 @@ func (a *App) identify(args []string) error {
 	return a.renderIdentification(format, result)
 }
 
+func (a *App) points(args []string) error {
+	fs := a.newFlagSet("points")
+	common := commonOptions{}
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	if err := fs.Parse(args); err != nil {
+		return err
+	}
+	cfg, format, err := common.loadConfig(fs, output.FormatTable)
+	if err != nil {
+		return err
+	}
+	if err := validateSnapshotFormat(format); err != nil {
+		return err
+	}
+	return a.renderPoints(format, devicemap.List(cfg.Points))
+}
+
+func (a *App) readPoint(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("%w: point name is required", modbusclient.ErrValidation)
+	}
+	if args[0] == "--help" || args[0] == "-h" {
+		printPointHelp(a.err)
+		return flag.ErrHelp
+	}
+	fs := a.newFlagSet("read-point")
+	common := commonOptions{}
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, false)
+	if err := fs.Parse(args[1:]); err != nil {
+		return err
+	}
+	cfg, format, err := common.loadConfig(fs, output.FormatTable)
+	if err != nil {
+		return err
+	}
+	if err := validateSnapshotFormat(format); err != nil {
+		return err
+	}
+	point, err := devicemap.Find(cfg.Points, args[0])
+	if err != nil {
+		return err
+	}
+	kind, err := devicemap.ReadKind(point)
+	if err != nil {
+		return err
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)
+	defer cancel()
+	client, err := a.openClient(ctx, cfg, common)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	result, err := readOnce(ctx, client, kind, point.Address, point.Quantity, point.Type, point.ByteOrder, point.WordOrder)
+	if err != nil {
+		return err
+	}
+	return a.renderRead(format, devicemap.ApplyRead(point, result))
+}
+
+func (a *App) writePoint(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("%w: point name is required", modbusclient.ErrValidation)
+	}
+	if args[0] == "--help" || args[0] == "-h" {
+		printPointHelp(a.err)
+		return flag.ErrHelp
+	}
+	fs := a.newFlagSet("write-point")
+	common := commonOptions{}
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, false)
+	rawValue := fs.String("value", "", "value to write")
+	dryRun := fs.Bool("dry-run", false, "print request without sending")
+	yes := fs.Bool("yes", false, "send the write request")
+	if err := fs.Parse(args[1:]); err != nil {
+		return err
+	}
+	if *dryRun && *yes {
+		return fmt.Errorf("%w: --dry-run and --yes cannot be used together", modbusclient.ErrValidation)
+	}
+	cfg, format, err := common.loadConfig(fs, output.FormatTable)
+	if err != nil {
+		return err
+	}
+	if err := validateSnapshotFormat(format); err != nil {
+		return err
+	}
+	point, err := devicemap.Find(cfg.Points, args[0])
+	if err != nil {
+		return err
+	}
+	kind, err := devicemap.WriteKind(point)
+	if err != nil {
+		return err
+	}
+	preparedValue, err := devicemap.PrepareWriteValue(point, *rawValue)
+	if err != nil {
+		return err
+	}
+	result, coilValues, registers, err := buildWriteResult(kind, point.Address, preparedValue, point.Type, point.ByteOrder, point.WordOrder, !*yes)
+	if err != nil {
+		return err
+	}
+	if result.Quantity != point.Quantity {
+		return fmt.Errorf("%w: point %q expects %d value register/coil(s), got %d", modbusclient.ErrValidation, point.Name, point.Quantity, result.Quantity)
+	}
+	result.Point = point.Name
+	result.Unit = point.Unit
+	result.Values = anyValues(splitCSV(*rawValue))
+	if !*yes {
+		return a.renderWrite(format, result)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)
+	defer cancel()
+	client, err := a.openClient(ctx, cfg, common)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	switch kind {
+	case "coil":
+		_, err = client.WriteSingleCoil(ctx, point.Address, coilValues[0])
+	case "coils":
+		_, err = client.WriteMultipleCoils(ctx, point.Address, coilValues)
+	case "register":
+		_, err = client.WriteSingleRegister(ctx, point.Address, registers[0])
+	case "registers":
+		_, err = client.WriteMultipleRegisters(ctx, point.Address, registers)
+	default:
+		return fmt.Errorf("%w: unsupported write type %q", modbusclient.ErrValidation, kind)
+	}
+	if err != nil {
+		return err
+	}
+	result.DryRun = false
+	result.Sent = true
+	return a.renderWrite(format, result)
+}
+
 func (a *App) watch(args []string) error {
 	if len(args) == 0 {
 		return fmt.Errorf("%w: watch type is required", modbusclient.ErrValidation)
@@ -407,6 +547,71 @@ func (a *App) watch(args []string) error {
 	}
 }
 
+func (a *App) watchPoint(args []string) error {
+	if len(args) == 0 {
+		return fmt.Errorf("%w: point name is required", modbusclient.ErrValidation)
+	}
+	if args[0] == "--help" || args[0] == "-h" {
+		printPointHelp(a.err)
+		return flag.ErrHelp
+	}
+	fs := a.newFlagSet("watch-point")
+	common := commonOptions{}
+	addCommonFlags(fs, &common, output.FormatText, defaultStreamHelp, true, false)
+	interval := fs.Duration("interval", time.Second, "poll interval")
+	duration := fs.Duration("duration", 0, "stop after this duration; zero runs until interrupted")
+	if err := fs.Parse(args[1:]); err != nil {
+		return err
+	}
+	cfg, format, err := common.loadConfig(fs, output.FormatText)
+	if err != nil {
+		return err
+	}
+	if err := validateStreamFormat(format); err != nil {
+		return err
+	}
+	if *interval <= 0 {
+		return fmt.Errorf("%w: --interval must be greater than zero", modbusclient.ErrValidation)
+	}
+	point, err := devicemap.Find(cfg.Points, args[0])
+	if err != nil {
+		return err
+	}
+	kind, err := devicemap.ReadKind(point)
+	if err != nil {
+		return err
+	}
+	connectCtx, connectCancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)
+	defer connectCancel()
+	client, err := a.openClient(connectCtx, cfg, common)
+	if err != nil {
+		return err
+	}
+	defer client.Close()
+	runCtx := context.Background()
+	if *duration > 0 {
+		var cancel context.CancelFunc
+		runCtx, cancel = context.WithTimeout(runCtx, *duration)
+		defer cancel()
+	}
+	ticker := time.NewTicker(*interval)
+	defer ticker.Stop()
+	for {
+		result, err := readOnce(runCtx, client, kind, point.Address, point.Quantity, point.Type, point.ByteOrder, point.WordOrder)
+		if err != nil {
+			return err
+		}
+		if err := a.renderWatch(format, devicemap.ApplyRead(point, result)); err != nil {
+			return err
+		}
+		select {
+		case <-runCtx.Done():
+			return nil
+		case <-ticker.C:
+		}
+	}
+}
+
 func (a *App) openClient(ctx context.Context, cfg config.Config, common commonOptions) (modbusclient.Client, error) {
 	if common.verbose {
 		fmt.Fprintf(a.err, "verbose: connect transport=%s address=%s unit_id=%d timeout=%s\n", cfg.Connection.Transport, cfg.Connection.Address, cfg.Connection.UnitID, cfg.Connection.Timeout)
@@ -460,6 +665,20 @@ Examples:
   modbus-cli watch holding-registers --address 0 --quantity 2 --type float32 --format jsonl`)
 }
 
+func printPointHelp(w io.Writer) {
+	fmt.Fprintln(w, `Usage of named point commands:
+  modbus-cli points [flags]
+  modbus-cli read-point <name> [flags]
+  modbus-cli write-point <name> --value <value> [flags]
+  modbus-cli watch-point <name> [flags]
+
+Examples:
+  modbus-cli points
+  modbus-cli read-point active_power
+  modbus-cli write-point breaker_closed --value on --yes
+  modbus-cli watch-point active_power --interval 1s --format jsonl`)
+}
+
 func splitCSV(value string) []string {
 	parts := strings.Split(value, ",")
 	out := make([]string, 0, len(parts))
@@ -468,6 +687,14 @@ func splitCSV(value string) []string {
 		if part != "" {
 			out = append(out, part)
 		}
+	}
+	return out
+}
+
+func anyValues(values []string) []any {
+	out := make([]any, 0, len(values))
+	for _, value := range values {
+		out = append(out, value)
 	}
 	return out
 }

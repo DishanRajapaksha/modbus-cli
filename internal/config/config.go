@@ -21,6 +21,7 @@ type Config struct {
 	Connection ConnectionConfig `yaml:"connection"`
 	RTU        RTUConfig        `yaml:"rtu"`
 	Output     OutputConfig     `yaml:"output"`
+	Points     []PointConfig    `yaml:"points,omitempty"`
 }
 
 type ConnectionConfig struct {
@@ -40,6 +41,20 @@ type RTUConfig struct {
 
 type OutputConfig struct {
 	Format string `yaml:"format"`
+}
+
+type PointConfig struct {
+	Name      string   `yaml:"name"`
+	Kind      string   `yaml:"kind"`
+	Address   uint16   `yaml:"address"`
+	Quantity  uint16   `yaml:"quantity,omitempty"`
+	Type      string   `yaml:"type,omitempty"`
+	ByteOrder string   `yaml:"byte_order,omitempty"`
+	WordOrder string   `yaml:"word_order,omitempty"`
+	Unit      string   `yaml:"unit,omitempty"`
+	Scale     *float64 `yaml:"scale,omitempty"`
+	Offset    *float64 `yaml:"offset,omitempty"`
+	Writable  bool     `yaml:"writable,omitempty"`
 }
 
 type FileConfig struct {
@@ -122,6 +137,9 @@ func LoadFile(path string) (FileConfig, error) {
 	if err := yaml.Unmarshal(data, &cfg); err != nil {
 		return FileConfig{}, fmt.Errorf("%w: parse config %q: %v", ErrConfig, path, err)
 	}
+	if err := validateDeclaredPointLists(cfg); err != nil {
+		return FileConfig{}, err
+	}
 	return cfg, nil
 }
 
@@ -160,12 +178,20 @@ func Validate(cfg Config) error {
 	default:
 		return fmt.Errorf("%w: rtu.parity must be N, E, or O", ErrConfig)
 	}
+	if err := validatePoints(cfg.Points); err != nil {
+		return err
+	}
 	return nil
 }
 
 func StarterConfigYAML() ([]byte, error) {
+	cfg := DefaultConfig()
+	cfg.Points = []PointConfig{
+		{Name: "breaker_closed", Kind: "coil", Address: 0, Quantity: 1, Writable: true},
+		{Name: "active_power", Kind: "holding-register", Address: 0, Quantity: 2, Type: "float32", Unit: "kW"},
+	}
 	return yaml.Marshal(FileConfig{
-		Config:         DefaultConfig(),
+		Config:         cfg,
 		DefaultProfile: "local",
 		Profiles: map[string]Config{
 			"local": {
@@ -210,6 +236,9 @@ func mergeConfig(base Config, override Config) Config {
 	if override.Output.Format != "" {
 		base.Output.Format = override.Output.Format
 	}
+	if len(override.Points) > 0 {
+		base.Points = mergePoints(base.Points, override.Points)
+	}
 	return base
 }
 
@@ -241,4 +270,84 @@ func applyOverrides(cfg *Config, overrides Overrides) {
 	if overrides.Parity != "" {
 		cfg.RTU.Parity = overrides.Parity
 	}
+}
+
+func mergePoints(base []PointConfig, override []PointConfig) []PointConfig {
+	out := append([]PointConfig(nil), base...)
+	index := map[string]int{}
+	for i, point := range out {
+		index[point.Name] = i
+	}
+	for _, point := range override {
+		if i, ok := index[point.Name]; ok && point.Name != "" {
+			out[i] = point
+			continue
+		}
+		index[point.Name] = len(out)
+		out = append(out, point)
+	}
+	return out
+}
+
+func validatePoints(points []PointConfig) error {
+	seen := map[string]struct{}{}
+	for _, point := range points {
+		name := strings.TrimSpace(point.Name)
+		if name == "" {
+			return fmt.Errorf("%w: point name is required", ErrConfig)
+		}
+		if _, ok := seen[name]; ok {
+			return fmt.Errorf("%w: duplicate point name %q", ErrConfig, name)
+		}
+		seen[name] = struct{}{}
+		switch strings.ToLower(point.Kind) {
+		case "coil", "discrete-input", "holding-register", "input-register":
+		default:
+			return fmt.Errorf("%w: point %q kind must be coil, discrete-input, holding-register, or input-register", ErrConfig, name)
+		}
+		if point.Quantity == 0 {
+			return fmt.Errorf("%w: point %q quantity must be greater than zero", ErrConfig, name)
+		}
+		switch strings.ToLower(point.Kind) {
+		case "coil", "discrete-input":
+			if point.Quantity > 2000 {
+				return fmt.Errorf("%w: point %q quantity must be 2000 or less", ErrConfig, name)
+			}
+		case "holding-register", "input-register":
+			if point.Quantity > 125 {
+				return fmt.Errorf("%w: point %q quantity must be 125 or less", ErrConfig, name)
+			}
+		}
+		switch strings.ToLower(point.Type) {
+		case "", "raw", "uint16", "int16", "uint32", "int32", "uint64", "int64", "float32", "float64":
+		default:
+			return fmt.Errorf("%w: point %q has unsupported type %q", ErrConfig, name, point.Type)
+		}
+		switch strings.ToLower(point.ByteOrder) {
+		case "", "big", "little":
+		default:
+			return fmt.Errorf("%w: point %q byte_order must be big or little", ErrConfig, name)
+		}
+		switch strings.ToLower(point.WordOrder) {
+		case "", "high-low", "low-high":
+		default:
+			return fmt.Errorf("%w: point %q word_order must be high-low or low-high", ErrConfig, name)
+		}
+		if point.Scale != nil && *point.Scale == 0 {
+			return fmt.Errorf("%w: point %q scale must not be zero", ErrConfig, name)
+		}
+	}
+	return nil
+}
+
+func validateDeclaredPointLists(file FileConfig) error {
+	if err := validatePoints(file.Points); err != nil {
+		return err
+	}
+	for name, profile := range file.Profiles {
+		if err := validatePoints(profile.Points); err != nil {
+			return fmt.Errorf("%w: profile %q: %v", ErrConfig, name, err)
+		}
+	}
+	return nil
 }

@@ -1,0 +1,33 @@
+connection:
+  transport: tcp
+  address: 127.0.0.1:502
+  unit_id: 1
+  timeout: 5s
+  idle_timeout: 1m
+
+rtu:
+  baud_rate: 19200
+  data_bits: 8
+  stop_bits: 1
+  parity: E
+
+output:
+  format: table
+
+default_profile: local
+profiles:
+  local:
+    connection:
+      transport: tcp
+      address: 127.0.0.1:502
+      unit_id: 1
+  serial:
+    connection:
+      transport: rtu
+      address: /dev/ttyUSB0
+      unit_id: 1
+    rtu:
+      baud_rate: 19200
+      data_bits: 8
+      stop_bits: 1
+      parity: E

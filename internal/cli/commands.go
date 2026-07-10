@@ -532,6 +532,11 @@ func (a *App) watch(args []string) error {
 	}
 	ticker := time.NewTicker(*interval)
 	defer ticker.Stop()
+	if output.NormaliseFormat(format) == output.FormatCSV {
+		if err := output.WriteCSV(a.out, readHeaders(), nil); err != nil {
+			return err
+		}
+	}
 	for {
 		result, err := readOnce(runCtx, client, kind, uint16(*address), uint16(*quantity), *valueType, *byteOrder, *wordOrder)
 		if err != nil {
@@ -597,6 +602,11 @@ func (a *App) watchPoint(args []string) error {
 	}
 	ticker := time.NewTicker(*interval)
 	defer ticker.Stop()
+	if output.NormaliseFormat(format) == output.FormatCSV {
+		if err := output.WriteCSV(a.out, readHeaders(), nil); err != nil {
+			return err
+		}
+	}
 	for {
 		result, err := readOnce(runCtx, client, kind, point.Address, point.Quantity, point.Type, point.ByteOrder, point.WordOrder)
 		if err != nil {

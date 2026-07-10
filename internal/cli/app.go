@@ -11,6 +11,7 @@ import (
 
 	"github.com/DishanRajapaksha/modbus-cli/internal/config"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
+	"github.com/DishanRajapaksha/modbus-cli/internal/output"
 )
 
 const (
@@ -120,6 +121,8 @@ func mapExitCode(err error) int {
 		return exitConfigError
 	case errors.Is(err, context.DeadlineExceeded), strings.Contains(strings.ToLower(err.Error()), "timeout"):
 		return exitTimeout
+	case errors.Is(err, output.ErrOutput):
+		return exitOutputError
 	case errors.Is(err, modbusclient.ErrConnection):
 		return exitConnection
 	case errors.Is(err, modbusclient.ErrRequest):

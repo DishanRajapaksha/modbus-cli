@@ -19,9 +19,11 @@ jobs:
         with:
           go-version: "1.23"
       - name: Apply CLI contract migration
-        run: python3 scripts/apply-cli-contracts.py
+        run: |
+          python3 scripts/apply-cli-contracts.py
+          python3 scripts/fix-cli-contract-tests.py
       - name: Format
-        run: gofmt -w internal/cli/app.go internal/cli/flags.go internal/cli/commands.go internal/cli/contracts_test.go
+        run: gofmt -w internal/cli/app.go internal/cli/flags.go internal/cli/commands.go internal/cli/app_test.go internal/cli/contracts_test.go
       - name: Test
         run: go test ./...
       - name: Build
@@ -29,6 +31,7 @@ jobs:
       - name: Commit verified changes
         run: |
           rm scripts/apply-cli-contracts.py
+          rm scripts/fix-cli-contract-tests.py
           rm .github/workflows/apply-cli-contracts.yml
           cat > .github/workflows/ci.yml <<'EOF'
           name: CI

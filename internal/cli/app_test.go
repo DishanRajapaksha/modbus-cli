@@ -68,9 +68,9 @@ func TestReadUsesFactory(t *testing.T) {
 	}
 }
 
-func TestPreCommandAddressBecomesConnectAddressForRead(t *testing.T) {
+func TestPreCommandConnectAddressForRead(t *testing.T) {
 	var out, err bytes.Buffer
-	code := NewAppWithFactory(&out, &err, fakeFactory{}).Run([]string{"--address", "192.0.2.10:502", "read", "holding-registers", "--address", "0", "--quantity", "1", "--type", "uint16"})
+	code := NewAppWithFactory(&out, &err, fakeFactory{}).Run([]string{"--connect-address", "192.0.2.10:502", "read", "holding-registers", "--address", "0", "--quantity", "1", "--type", "uint16"})
 	if code != exitSuccess {
 		t.Fatalf("code=%d err=%s", code, err.String())
 	}

@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
@@ -19,6 +20,8 @@ const (
 	exitConfigError   = 2
 	exitConnection    = 3
 	exitRequestError  = 4
+	exitWriteRejected = 7
+	exitTimeout       = 8
 	exitOutputError   = 9
 	defaultStreamHelp = "output format: text, jsonl, or csv"
 )
@@ -115,6 +118,8 @@ func mapExitCode(err error) int {
 		return exitConfigError
 	case errors.Is(err, modbusclient.ErrValidation):
 		return exitConfigError
+	case errors.Is(err, context.DeadlineExceeded), strings.Contains(strings.ToLower(err.Error()), "timeout"):
+		return exitTimeout
 	case errors.Is(err, modbusclient.ErrConnection):
 		return exitConnection
 	case errors.Is(err, modbusclient.ErrRequest):
@@ -137,7 +142,7 @@ Usage:
   modbus-cli [global flags] <command> [flags]
   modbus-cli init-config
   modbus-cli validate-config --profile local
-  modbus-cli test-connection --transport tcp --address 127.0.0.1:502
+  modbus-cli test-connection --transport tcp --connect-address 127.0.0.1:502
   modbus-cli read holding-registers --address 0 --quantity 2 --type float32
   modbus-cli read-point active_power
   modbus-cli write register --address 10 --type uint16 --value 42 --yes
@@ -168,12 +173,12 @@ Common flags:
   --config      YAML config file, defaults to config.yaml
   --profile     Config profile name
   --transport   tcp or rtu
-  --address     TCP host:port or serial device path on diagnostics; coil/register address on read/write/watch
   --connect-address
-                TCP host:port or serial device path on read/write/watch
+                TCP host:port or serial device path for all commands
+  --address     Coil or register address on read/write/watch commands
   --unit-id     Modbus unit/slave id
   --timeout     Request timeout
-  --format      table, text, json, jsonl, or csv
+  --format      snapshots: table, text, json, csv; streams: text, jsonl, csv
   --verbose     Print high-level connection decisions
   --debug       Enable lower-level Modbus client debug logging`)
 }
@@ -210,7 +215,7 @@ func normaliseGlobalFlags(args []string) ([]string, error) {
 				return nil, fmt.Errorf("%s does not take a value", name)
 			}
 			globals = append(globals, name)
-		case "--config", "--profile", "--transport", "--address", "--connect-address", "--unit-id", "--timeout", "--format", "--baud-rate", "--data-bits", "--stop-bits", "--parity":
+		case "--config", "--profile", "--transport", "--connect-address", "--unit-id", "--timeout", "--format", "--baud-rate", "--data-bits", "--stop-bits", "--parity":
 			value := inlineValue
 			if !hasInlineValue {
 				i++

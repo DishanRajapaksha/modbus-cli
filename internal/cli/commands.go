@@ -69,7 +69,7 @@ func (a *App) validateConfig(args []string) error {
 func (a *App) testConnection(args []string) error {
 	fs := a.newFlagSet("test-connection")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, true)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func (a *App) read(args []string) error {
 	kind := args[0]
 	fs := a.newFlagSet("read " + kind)
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, false)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, false)
 	address := fs.Uint("address", 0, "starting Modbus address")
 	quantity := fs.Uint("quantity", 1, "number of coils/registers to read")
 	valueType := fs.String("type", modbusclient.TypeRaw, "register type: raw, uint16, int16, uint32, int32, uint64, int64, float32, or float64")
@@ -213,7 +213,7 @@ func (a *App) write(args []string) error {
 	kind := args[0]
 	fs := a.newFlagSet("write " + kind)
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, false)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, false)
 	address := fs.Uint("address", 0, "starting Modbus address")
 	rawValue := fs.String("value", "", "value to write; use comma-separated values for multiple coils/registers")
 	valueType := fs.String("type", modbusclient.TypeUint16, "register type: raw, uint16, int16, uint32, int32, uint64, int64, float32, or float64")
@@ -312,7 +312,7 @@ func buildWriteResult(kind string, address uint16, rawValue, valueType, byteOrde
 func (a *App) identify(args []string) error {
 	fs := a.newFlagSet("identify")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, true)
 	levelValue := fs.String("level", string(modbusclient.IdentificationBasic), "identification level: basic, regular, or extended")
 	if err := fs.Parse(args); err != nil {
 		return err
@@ -349,7 +349,7 @@ func (a *App) identify(args []string) error {
 func (a *App) points(args []string) error {
 	fs := a.newFlagSet("points")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, true)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -373,7 +373,7 @@ func (a *App) readPoint(args []string) error {
 	}
 	fs := a.newFlagSet("read-point")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, false)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, false)
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
@@ -416,7 +416,7 @@ func (a *App) writePoint(args []string) error {
 	}
 	fs := a.newFlagSet("write-point")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, false)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, false)
 	rawValue := fs.String("value", "", "value to write")
 	dryRun := fs.Bool("dry-run", false, "print request without sending")
 	yes := fs.Bool("yes", false, "send the write request")
@@ -634,7 +634,7 @@ func (a *App) sunspec(args []string) error {
 func (a *App) sunspecScan(args []string) error {
 	fs := a.newFlagSet("sunspec scan")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, true)
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -662,7 +662,7 @@ func (a *App) sunspecScan(args []string) error {
 func (a *App) sunspecRead(args []string) error {
 	fs := a.newFlagSet("sunspec read")
 	common := commonOptions{}
-	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, jsonl, or csv", true, true)
+	addCommonFlags(fs, &common, output.FormatTable, "output format: table, text, json, or csv", true, true)
 	modelID := fs.Uint("model", 0, "SunSpec model id")
 	pointID := fs.String("point", "", "SunSpec point id")
 	if err := fs.Parse(args); err != nil {

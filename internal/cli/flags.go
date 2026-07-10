@@ -41,11 +41,7 @@ func addCommonFlags(fs *flag.FlagSet, opts *commonOptions, defaultFormat string,
 	fs.StringVar(&opts.configPath, "config", config.DefaultConfigPath, "YAML config file")
 	fs.StringVar(&opts.profile, "profile", "", "config profile name")
 	fs.StringVar(&opts.transport, "transport", opts.transport, "Modbus transport: tcp or rtu")
-	if includeConnectionAddress {
-		fs.StringVar(&opts.address, "address", opts.address, "TCP host:port or serial device path")
-	} else {
-		fs.StringVar(&opts.address, "connect-address", opts.address, "TCP host:port or serial device path")
-	}
+	fs.StringVar(&opts.address, "connect-address", opts.address, "TCP host:port or serial device path")
 	fs.UintVar(&opts.unitID, "unit-id", opts.unitID, "Modbus unit/slave id")
 	fs.DurationVar(&opts.timeout, "timeout", opts.timeout, "request timeout")
 	if includeFormat {
@@ -65,7 +61,7 @@ func (opts commonOptions) loadConfig(fs *flag.FlagSet, defaultFormat string) (co
 	if visited["transport"] {
 		overrides.Transport = opts.transport
 	}
-	if visited["address"] || visited["connect-address"] {
+	if visited["connect-address"] {
 		overrides.Address = opts.address
 	}
 	if visited["unit-id"] {
@@ -119,7 +115,7 @@ func visitedFlags(fs *flag.FlagSet) map[string]bool {
 
 func validateSnapshotFormat(format string) error {
 	switch output.NormaliseFormat(format) {
-	case output.FormatTable, output.FormatText, output.FormatJSON, output.FormatJSONL, output.FormatCSV:
+	case output.FormatTable, output.FormatText, output.FormatJSON, output.FormatCSV:
 		return nil
 	default:
 		return fmt.Errorf("%w: invalid output format %q", config.ErrConfig, format)

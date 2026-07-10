@@ -1,15 +1,17 @@
 name: apply-cli-contracts
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/align-cli-contracts
+      - main
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
 
 jobs:
   apply:
+    if: github.head_ref == 'agent/align-cli-contracts'
     runs-on: ubuntu-latest
     steps:
       - name: Check out branch
@@ -28,14 +30,6 @@ jobs:
         run: |
           python3 <<'PY'
           from pathlib import Path
-
-          def replace_once(path, old, new):
-              p = Path(path)
-              text = p.read_text()
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f"{path}: expected one occurrence, found {count}: {old!r}")
-              p.write_text(text.replace(old, new, 1))
 
           app = Path("internal/cli/app.go")
           text = app.read_text()

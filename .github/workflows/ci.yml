@@ -12,5 +12,21 @@ jobs:
       - uses: actions/setup-go@v5
         with:
           go-version: "1.23"
+      - name: Apply CLI contract migration
+        run: python3 scripts/apply-cli-contracts.py
+      - name: Format
+        run: gofmt -w internal/cli/app.go internal/cli/flags.go internal/cli/commands.go internal/cli/contracts_test.go
       - run: go test ./...
       - run: make build
+      - name: Package migrated files
+        run: |
+          tar -czf cli-contracts.tar.gz \
+            internal/cli/app.go \
+            internal/cli/flags.go \
+            internal/cli/commands.go \
+            internal/cli/contracts_test.go \
+            README.md
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cli-contracts
+          path: cli-contracts.tar.gz

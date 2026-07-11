@@ -77,7 +77,7 @@ Override config values with CLI flags:
 
 ```bash
 modbus-cli read coils --transport tcp --connect-address 192.0.2.10:502 --unit-id 7 --address 0 --quantity 8
-modbus-cli --address 192.0.2.10:502 read coils --address 0 --quantity 8
+modbus-cli --connect-address 192.0.2.10:502 read coils --address 0 --quantity 8
 ```
 
 Example config:
@@ -136,7 +136,7 @@ profiles:
 
 ```bash
 modbus-cli validate-config --config config.example.yaml
-modbus-cli test-connection --transport tcp --address 127.0.0.1:502 --unit-id 1
+modbus-cli test-connection --transport tcp --connect-address 127.0.0.1:502 --unit-id 1
 modbus-cli status --profile local
 ```
 
@@ -241,7 +241,6 @@ Snapshot commands support:
 table
 text
 json
-jsonl
 csv
 ```
 
@@ -305,7 +304,9 @@ modbus-cli completions zsh > "${HOME}/.zsh/completions/_modbus-cli"
 1  general error
 2  config or validation error
 3  connection error
-4  Modbus request error
+4  protocol or request error
+7  write or control rejected (reserved)
+8  operation timeout
 9  output or formatting error
 ```
 

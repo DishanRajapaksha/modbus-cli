@@ -35,22 +35,26 @@ func (a *App) renderRead(format string, result modbusclient.ReadResult) error {
 	case output.FormatJSONL:
 		for _, value := range result.Values {
 			if err := output.WriteJSONLine(a.out, value); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
 	case output.FormatCSV:
-		return output.WriteCSV(a.out, []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}, readRows(result))
+		return output.WriteCSV(a.out, readHeaders(), readRows(result))
 	case output.FormatText:
 		for _, value := range result.Values {
 			if _, err := fmt.Fprintf(a.out, "%d %v\n", value.Address, value.Value); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
 	default:
-		return output.WriteTable(a.out, []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}, readRows(result))
+		return output.WriteTable(a.out, readHeaders(), readRows(result))
 	}
+}
+
+func readHeaders() []string {
+	return []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}
 }
 
 func readRows(result modbusclient.ReadResult) [][]string {
@@ -87,7 +91,7 @@ func (a *App) renderIdentification(format string, result modbusclient.Identifica
 	case output.FormatJSONL:
 		for key, value := range result.Objects {
 			if err := output.WriteJSONLine(a.out, map[string]string{"object": key, "value": value}); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
@@ -96,7 +100,7 @@ func (a *App) renderIdentification(format string, result modbusclient.Identifica
 	case output.FormatText:
 		for _, row := range identificationRows(result) {
 			if _, err := fmt.Fprintf(a.out, "%s: %s\n", row[0], row[1]); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
@@ -112,7 +116,7 @@ func (a *App) renderPoints(format string, points []config.PointConfig) error {
 	case output.FormatJSONL:
 		for _, point := range points {
 			if err := output.WriteJSONLine(a.out, point); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
@@ -121,7 +125,7 @@ func (a *App) renderPoints(format string, points []config.PointConfig) error {
 	case output.FormatText:
 		for _, point := range points {
 			if _, err := fmt.Fprintf(a.out, "%s %s address=%d quantity=%d type=%s unit=%s writable=%t\n", point.Name, point.Kind, point.Address, point.Quantity, point.Type, point.Unit, point.Writable); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
@@ -144,7 +148,7 @@ func (a *App) renderSunSpecScan(format string, result sunspec.ScanResult) error 
 				"length":  row[4],
 				"points":  row[5],
 			}); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
@@ -153,7 +157,7 @@ func (a *App) renderSunSpecScan(format string, result sunspec.ScanResult) error 
 	case output.FormatText:
 		for _, row := range sunspecRows(result) {
 			if _, err := fmt.Fprintf(a.out, "device=%s model=%s block=%s address=%s length=%s points=%s\n", row[0], row[1], row[2], row[3], row[4], row[5]); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil
@@ -226,11 +230,11 @@ func (a *App) renderWatch(format string, result modbusclient.ReadResult) error {
 	case output.FormatJSONL:
 		return output.WriteJSONLine(a.out, result)
 	case output.FormatCSV:
-		return output.WriteCSV(a.out, []string{"Point", "Kind", "Address", "Value", "Unit", "Raw"}, readRows(result))
+		return output.WriteCSVRows(a.out, readRows(result))
 	default:
 		for _, value := range result.Values {
 			if _, err := fmt.Fprintf(a.out, "%s %d %v\n", result.Timestamp.Format("2006-01-02T15:04:05Z07:00"), value.Address, value.Value); err != nil {
-				return err
+				return fmt.Errorf("%w: %v", output.ErrOutput, err)
 			}
 		}
 		return nil

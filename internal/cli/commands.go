@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/DishanRajapaksha/industrial-cli-kit/safety"
 	"github.com/DishanRajapaksha/modbus-cli/internal/config"
 	"github.com/DishanRajapaksha/modbus-cli/internal/devicemap"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
@@ -224,8 +225,9 @@ func (a *App) write(args []string) error {
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
-	if *dryRun && *yes {
-		return fmt.Errorf("%w: --dry-run and --yes cannot be used together", modbusclient.ErrValidation)
+	mode, err := safety.Resolve(*yes, *dryRun)
+	if err != nil {
+		return fmt.Errorf("%w: %v", modbusclient.ErrValidation, err)
 	}
 	cfg, format, err := common.loadConfig(fs, output.FormatTable)
 	if err != nil {
@@ -237,11 +239,11 @@ func (a *App) write(args []string) error {
 	if *address > 65535 || strings.TrimSpace(*rawValue) == "" {
 		return fmt.Errorf("%w: --address and --value are required", modbusclient.ErrValidation)
 	}
-	result, coilValues, registers, err := buildWriteResult(kind, uint16(*address), *rawValue, *valueType, *byteOrder, *wordOrder, !*yes)
+	result, coilValues, registers, err := buildWriteResult(kind, uint16(*address), *rawValue, *valueType, *byteOrder, *wordOrder, mode == safety.DryRun)
 	if err != nil {
 		return err
 	}
-	if !*yes {
+	if mode == safety.DryRun {
 		return a.renderWrite(format, result)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)
@@ -423,8 +425,9 @@ func (a *App) writePoint(args []string) error {
 	if err := fs.Parse(args[1:]); err != nil {
 		return err
 	}
-	if *dryRun && *yes {
-		return fmt.Errorf("%w: --dry-run and --yes cannot be used together", modbusclient.ErrValidation)
+	mode, err := safety.Resolve(*yes, *dryRun)
+	if err != nil {
+		return fmt.Errorf("%w: %v", modbusclient.ErrValidation, err)
 	}
 	cfg, format, err := common.loadConfig(fs, output.FormatTable)
 	if err != nil {
@@ -445,7 +448,7 @@ func (a *App) writePoint(args []string) error {
 	if err != nil {
 		return err
 	}
-	result, coilValues, registers, err := buildWriteResult(kind, point.Address, preparedValue, point.Type, point.ByteOrder, point.WordOrder, !*yes)
+	result, coilValues, registers, err := buildWriteResult(kind, point.Address, preparedValue, point.Type, point.ByteOrder, point.WordOrder, mode == safety.DryRun)
 	if err != nil {
 		return err
 	}
@@ -455,7 +458,7 @@ func (a *App) writePoint(args []string) error {
 	result.Point = point.Name
 	result.Unit = point.Unit
 	result.Values = anyValues(splitCSV(*rawValue))
-	if !*yes {
+	if mode == safety.DryRun {
 		return a.renderWrite(format, result)
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), cfg.Connection.Timeout)

@@ -1,3 +1,5 @@
+github.com/DishanRajapaksha/industrial-cli-kit v0.1.0 h1:yXU8suAVVnjzhpL+u8HwcdAgBrhuOpBLxjNkKKMI/h4=
+github.com/DishanRajapaksha/industrial-cli-kit v0.1.0/go.mod h1:VMMmT0qKjdZ8kJE88HFZDJDa4gftgSX7gXwQTY4mtuM=
 github.com/andig/gosunspec v0.0.0-20240918203654-860ce51d602b h1:81UMfM949I7StrRay7YDUZazY8M1u/JHkzwcFEjiilQ=
 github.com/andig/gosunspec v0.0.0-20240918203654-860ce51d602b/go.mod h1:c6P6szcR+ROkqZruOR4f6qbDKFjZX6OitPpj+yJ/r8k=
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=

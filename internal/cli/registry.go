@@ -24,16 +24,16 @@ var cliRegistry = command.Registry{
 		{Name: "validate-config", Summary: "Validate local config without connecting"},
 		{Name: "test-connection", Summary: "Run transport and request diagnostics"},
 		{Name: "status", Summary: "Alias for test-connection"},
-		{Name: "read", Summary: "Read Modbus values", Subcommands: readRegistryCommands()},
-		{Name: "write", Summary: "Write Modbus values", Subcommands: writeRegistryCommands()},
+		{Name: "read", Summary: "Read Modbus values", LeadingArgs: 1, Subcommands: readRegistryCommands()},
+		{Name: "write", Summary: "Write Modbus values", LeadingArgs: 1, Subcommands: writeRegistryCommands()},
 		{Name: "points", Summary: "List configured named points"},
-		{Name: "read-point", Summary: "Read a configured named point"},
-		{Name: "write-point", Summary: "Write a configured named point", Flags: registryFlags("value", "yes", "dry-run")},
-		{Name: "watch-point", Summary: "Poll a configured named point", Flags: registryFlags("interval", "count")},
-		{Name: "sunspec", Summary: "Scan or read SunSpec models", Subcommands: []command.Command{{Name: "scan", Summary: "Scan SunSpec models"}, {Name: "read", Summary: "Read a SunSpec model"}}},
-		{Name: "identify", Summary: "Read device identification objects"},
-		{Name: "watch", Summary: "Poll Modbus values", Subcommands: readRegistryCommands()},
-		{Name: "completions", Summary: "Generate shell completion scripts"},
+		{Name: "read-point", Summary: "Read a configured named point", LeadingArgs: 1},
+		{Name: "write-point", Summary: "Write a configured named point", LeadingArgs: 1, Flags: registryFlags("value", "yes", "dry-run")},
+		{Name: "watch-point", Summary: "Poll a configured named point", LeadingArgs: 1, Flags: registryFlags("interval", "duration")},
+		{Name: "sunspec", Summary: "Scan or read SunSpec models", LeadingArgs: 1, Subcommands: sunSpecRegistryCommands()},
+		{Name: "identify", Summary: "Read device identification objects", Flags: registryFlags("level")},
+		{Name: "watch", Summary: "Poll Modbus values", LeadingArgs: 1, Flags: registryFlags("interval", "duration"), Subcommands: readRegistryCommands()},
+		{Name: "completions", Summary: "Generate shell completion scripts", LeadingArgs: 1},
 		{Name: "help", Summary: "Print help"},
 		{Name: "version", Summary: "Print version information"},
 	},
@@ -56,6 +56,14 @@ func writeRegistryCommands() []command.Command {
 		{Name: "coils", Summary: "Write multiple coils", Flags: flags},
 		{Name: "register", Summary: "Write one register", Flags: flags},
 		{Name: "registers", Summary: "Write multiple registers", Flags: flags},
+	}
+}
+
+func sunSpecRegistryCommands() []command.Command {
+	return []command.Command{
+		{Name: "scan", Summary: "Scan SunSpec models"},
+		{Name: "models", Summary: "Alias for SunSpec scan"},
+		{Name: "read", Summary: "Read a SunSpec point", Flags: registryFlags("model", "point")},
 	}
 }
 

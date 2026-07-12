@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - agent/adopt-command-registry-v2
+  pull_request:
 
 permissions:
   contents: read

@@ -141,51 +141,7 @@ func mapExitCode(err error) int {
 }
 
 func (a *App) printUsage() {
-	fmt.Fprintln(a.out, `modbus-cli is a script-friendly Modbus TCP and RTU command-line client.
-
-Usage:
-  modbus-cli [global flags] <command> [flags]
-  modbus-cli init-config
-  modbus-cli validate-config --profile local
-  modbus-cli test-connection --transport tcp --connect-address 127.0.0.1:502
-  modbus-cli read holding-registers --address 0 --quantity 2 --type float32
-  modbus-cli read-point active_power
-  modbus-cli write register --address 10 --type uint16 --value 42 --yes
-  modbus-cli write-point breaker_closed --value on --yes
-  modbus-cli sunspec scan
-  modbus-cli watch coils --address 0 --quantity 8 --interval 1s --format jsonl
-  modbus-cli completions zsh
-  modbus-cli version
-
-Commands:
-  init-config       Write a starter YAML config file
-  validate-config  Validate local config without connecting
-  test-connection  Run transport and request diagnostics
-  status           Alias for test-connection
-  read             Read coils, discrete inputs, holding registers, or input registers
-  write            Write coils or holding registers
-  points           List configured named points
-  read-point       Read a configured named point
-  write-point      Write a configured named point
-  watch-point      Poll a configured named point
-  sunspec          Scan/read SunSpec models
-  identify         Read device identification objects
-  watch            Poll values repeatedly
-  completions      Generate shell completion scripts
-  version          Print version information
-
-Common flags:
-  --config      YAML config file, defaults to config.yaml
-  --profile     Config profile name
-  --transport   tcp or rtu
-  --connect-address
-                TCP host:port or serial device path for all commands
-  --address     Coil or register address on read/write/watch commands
-  --unit-id     Modbus unit/slave id
-  --timeout     Request timeout
-  --format      snapshots: table, text, json, csv; streams: text, jsonl, csv
-  --verbose     Print high-level connection decisions
-  --debug       Enable lower-level Modbus client debug logging`)
+	a.writeRegistryUsage()
 }
 
 func (a *App) newFlagSet(name string) *flag.FlagSet {

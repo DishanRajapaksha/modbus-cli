@@ -8,9 +8,18 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DishanRajapaksha/industrial-cli-kit/contracttest"
 	"github.com/DishanRajapaksha/modbus-cli/internal/config"
 	"github.com/DishanRajapaksha/modbus-cli/internal/modbusclient"
 )
+
+func TestSharedCommandContract(t *testing.T) {
+	contracttest.Baseline(t, func(args ...string) contracttest.Result {
+		var out, errOut bytes.Buffer
+		code := NewAppWithFactory(&out, &errOut, fakeFactory{}).Run(args)
+		return contracttest.Result{Code: code, Stdout: out.String(), Stderr: errOut.String()}
+	})
+}
 
 func TestHelpExitsSuccess(t *testing.T) {
 	var out, err bytes.Buffer

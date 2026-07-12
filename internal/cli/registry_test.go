@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/DishanRajapaksha/industrial-cli-kit/command"
 	"github.com/DishanRajapaksha/industrial-cli-kit/completion"
 )
 
@@ -149,30 +150,18 @@ func TestGeneratedCompletionsContainNestedCommandsAndSafetyFlags(t *testing.T) {
 	}
 }
 
-func registryCommand(t *testing.T, name string) commandSnapshot {
+func registryCommand(t *testing.T, name string) command.Command {
 	t.Helper()
 	for _, registered := range cliRegistry.Commands {
 		if registered.Name == name {
-			return commandSnapshot{flags: registered.Flags}
+			return registered
 		}
 	}
 	t.Fatalf("registry command %q not found", name)
-	return commandSnapshot{}
+	return command.Command{}
 }
 
-type commandSnapshot struct {
-	flags []struct {
-		Name       string
-		TakesValue bool
-		Summary    string
-	}
-}
-
-func assertFlag(t *testing.T, flags []struct {
-	Name       string
-	TakesValue bool
-	Summary    string
-}, name string, takesValue bool) {
+func assertFlag(t *testing.T, flags []command.Flag, name string, takesValue bool) {
 	t.Helper()
 	for _, flag := range flags {
 		if flag.Name == name {

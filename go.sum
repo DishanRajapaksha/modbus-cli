@@ -1,5 +1,5 @@
-github.com/DishanRajapaksha/industrial-cli-kit v0.0.0-20260712100708-068703083f58 h1:L+bJ1JFYtgzl2f+5nAvA3YRNyEznB5vdapsCYFuhUto=
-github.com/DishanRajapaksha/industrial-cli-kit v0.0.0-20260712100708-068703083f58/go.mod h1:VMMmT0qKjdZ8kJE88HFZDJDa4gftgSX7gXwQTY4mtuM=
+github.com/DishanRajapaksha/industrial-cli-kit v0.1.1-0.20260712101327-cd602304d505 h1:1WdhcNU1o8qe2GVp7rmvWRFFl3P3Mhp7qxkX7B4/TGg=
+github.com/DishanRajapaksha/industrial-cli-kit v0.1.1-0.20260712101327-cd602304d505/go.mod h1:VMMmT0qKjdZ8kJE88HFZDJDa4gftgSX7gXwQTY4mtuM=
 github.com/andig/gosunspec v0.0.0-20240918203654-860ce51d602b h1:81UMfM949I7StrRay7YDUZazY8M1u/JHkzwcFEjiilQ=
 github.com/andig/gosunspec v0.0.0-20240918203654-860ce51d602b/go.mod h1:c6P6szcR+ROkqZruOR4f6qbDKFjZX6OitPpj+yJ/r8k=
 github.com/fatih/camelcase v1.0.0/go.mod h1:yN2Sb0lFhZJUdVvtELVWefmrXpuZESvPmqwoZc+/fpc=

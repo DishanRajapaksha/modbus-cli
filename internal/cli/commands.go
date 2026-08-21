@@ -60,6 +60,9 @@ func (a *App) validateConfig(args []string) error {
 		}
 		return fmt.Errorf("%w: stat config %q: %v", config.ErrConfig, common.configPath, err)
 	}
+	if err := validateSnapshotFormat(common.format); err != nil {
+		return err
+	}
 	if _, _, err := common.loadConfig(fs, output.FormatTable); err != nil {
 		return err
 	}

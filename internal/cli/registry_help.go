@@ -1,9 +1,17 @@
 package cli
 
-import sharedhelp "github.com/DishanRajapaksha/industrial-cli-kit/help"
+import (
+	"io"
+
+	sharedhelp "github.com/DishanRajapaksha/industrial-cli-kit/help"
+)
 
 func (a *App) writeRegistryUsage() {
-	_ = sharedhelp.Write(a.out, cliRegistry, sharedhelp.Options{
+	a.writeRegistryUsageTo(a.out)
+}
+
+func (a *App) writeRegistryUsageTo(w io.Writer) {
+	_ = sharedhelp.Write(w, cliRegistry, sharedhelp.Options{
 		Description: "modbus-cli is a script-friendly Modbus TCP and RTU command-line client.",
 		Usage: []string{
 			"modbus-cli [global flags] <command> [flags]",
